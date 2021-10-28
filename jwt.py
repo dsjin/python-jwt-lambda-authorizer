@@ -24,11 +24,7 @@ class JWKSClient:
     def __init__(
         self,
         tenant_url: str,
-        audience: str,
-        issuer: str
     ):
-        self.audience = audience
-        self.issuer = issuer
         self.tenant_url = tenant_url
         self.jwks_url = BASE_JWSK_URL.format(
             tenant_url=tenant_url
@@ -38,7 +34,6 @@ class JWKSClient:
     def get_jwks(self, force: bool = False):
         try:
             if not self._jwks or force:
-                print(self.jwks_url)
                 jsonurl = urlopen(self.jwks_url)
                 self._jwks = json.loads(jsonurl.read())
             return self._jwks
