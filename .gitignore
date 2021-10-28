@@ -1,5 +1,5 @@
 .env
 package
-event.json
+*event.json
 *.zip
 __pycache__

@@ -29,7 +29,7 @@ def lambda_handler(event, context):
         jwt_instance = JWT(
             audience=os.environ.get('audience', 'audience'),
             issuer=os.environ.get('issuer', 'issuer'),
-            token=JWT.get_token_authorizer(event),
+            token=JWT.get_token_request(event),
             jwks_client=jwks_client
         )
         return {

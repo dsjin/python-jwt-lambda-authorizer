@@ -113,7 +113,7 @@ class JWT:
             raise RSAKeyNotFoundError('RSA Key not found in the jwks keys')
 
     @staticmethod
-    def get_token(param: dict):
+    def get_token_authorizer(param: dict):
         if not param['type'] or param['type'] != 'TOKEN':
             raise TokenError('Expected "event.type" parameter to have value "TOKEN"')
         elif not param['authorizationToken']:
@@ -125,10 +125,25 @@ class JWT:
         return match[1]
 
     @staticmethod
-    def check_scope(token: str, required_scope: str) -> bool:
+    def get_token_request(param: dict):
+        if not param['requestContext'] or 'authorizer' not in param['requestContext'] or 'Authorizer' not in param['requestContext']:
+            raise TokenError('Expected "header.authorization/header.Authorization" parameter to be set')
+        target_auth_key = 'authorization' if 'authorization' not in param['headers'] else 'Authorization'
+        match = PATTERN.match(param['headers'][target_auth_key])
+        if not match:
+            raise TokenError('Invalid Authorization token - {token_string} does not match "Bearer .*"'.format(token_string = param['authorizationToken']))
+        
+        return match[1]
+
+    @classmethod
+    def check_scope_from_token(cls, token: str, required_scope: str) -> bool:
         unverified_claims = jwt.get_unverified_claims(token)
-        if unverified_claims.get("scope"):
-            token_scopes = unverified_claims["scope"].split()
+        return cls.check_scope(unverified_claims.get('scope'), required_scope)
+
+    @staticmethod
+    def check_scope(current_scopes: list, required_scope: str) -> bool:
+        if current_scopes:
+            token_scopes = current_scopes.split()
             for token_scope in token_scopes:
                 if token_scope == required_scope:
                     return True
@@ -137,10 +152,18 @@ class JWT:
 def check_scope_lambda(required_scope: str):
     def decorator(func):
         def inner(event, context):
-            target_token = JWT.get_token(event)
-            is_valid = JWT.check_scope(target_token, required_scope)
-            if not is_valid:
-                raise TokenError('Insufficient Scope: Require {scope}'.format(scope=required_scope))
-            return func(event, context)
+            try:
+                if 'requestContext' not in event or 'authorizer' not in event['requestContext'] or ('lambda' not in event['requestContext']['authorizer'] and 'scope' not in event['requestContext']['authorizer']) or ('lambda' in event['requestContext']['authorizer'] and 'scope' not in event['requestContext']['authorizer']['lambda']):
+                    raise TokenError('Expected "requestContext.scope" parameter to be set')
+                is_valid = JWT.check_scope(event['requestContext']['authorizer']['scope'] if 'scope' in event['requestContext']['authorizer'] else event['requestContext']['authorizer']['lambda']['scope'], required_scope)
+                if not is_valid:
+                    raise TokenError('Insufficient Scope: Require {scope}'.format(scope=required_scope))
+                return func(event, context)
+            except TokenError as e:
+                print(e)
+                return {
+                    'statusCode': 403,
+                    'body': json.dumps('unauthorized')
+                }
         return inner
     return decorator
