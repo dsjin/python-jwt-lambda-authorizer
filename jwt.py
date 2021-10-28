@@ -139,3 +139,14 @@ class JWT:
                     return True
         return False
 
+
+def check_scope_lambda(required_scope: str):
+    def decorator(func):
+        def inner(event, context):
+            target_token = JWT.get_token(event)
+            is_valid = JWT.check_scope(target_token, required_scope)
+            if not is_valid:
+                raise TokenError('Insufficient Scope: Require {scope}'.format(scope=required_scope))
+            return func(event, context)
+        return inner
+    return decorator
