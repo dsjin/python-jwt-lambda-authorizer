@@ -139,7 +139,6 @@ class JWT:
                     return True
         return False
 
-
 def check_scope_lambda(required_scope: str):
     def decorator(func):
         def inner(event, context):

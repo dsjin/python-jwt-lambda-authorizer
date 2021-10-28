@@ -1,9 +1,10 @@
+import os
 from jwt import JWKSClient, JWT
 
 jwks_client = JWKSClient(
-    tenant_url=None,
-    audience=None,
-    issuer=None
+    tenant_url=os.environ.get('tenant_url', 'tenant_url'),
+    audience=os.environ.get('tenant_url', 'audience'),
+    issuer=os.environ.get('tenant_url', 'issuer')
 )
 
 get_policy_document = lambda effect, resource: {
@@ -26,8 +27,8 @@ def format_payload(payload: dict) -> dict:
 def lambda_handler(event, context):
     try:
         jwt_instance = JWT(
-            audience=None,
-            issuer=None,
+            audience=os.environ.get('tenant_url', 'audience'),
+            issuer=os.environ.get('tenant_url', 'issuer'),
             token=JWT.get_token(event),
             jwks_client=jwks_client
         )
