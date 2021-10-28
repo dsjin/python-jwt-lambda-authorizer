@@ -1,3 +1,2 @@
-python-lambda-local
 python-jose
 six
